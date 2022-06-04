@@ -2,188 +2,184 @@
 #define LABA_7_CIRCULARBUFFER_H
 
 #include <iostream>
-#include <algorithm>
+#include <ostream>
 #include <iterator>
+#include <algorithm>
 
-template<class T>
-class circular_buffer {
+template <class T>
+class Circular_Buffer {
 private:
-    int m_capacity = 0;
-    T *m_arr = new T[m_capacity];
-    T *m_first, *m_last, *m_cur_first, *m_cur_last;
-public:
+    int capacity;
+    T *data;
+    int head = 0;
+    int tail = 0;
 
-    class iter : public std::iterator<std::random_access_iterator_tag, T> {
+public://итераторы
+    class Iterator : public std::iterator<std::random_access_iterator_tag, T> {
     private:
         T *p;
+
     public:
-        iter() : p(nullptr) {}
+        Iterator() : p (nullptr) {}
+        Iterator(T *p) : p (p) {}
 
-        iter(T *p) : p(p) {}
-
-        iter(const iter &it) : p(it.p) {}
-
-        iter &operator+=(int x) {
-            p += x;
-            return *this;
-        }
-
-        iter &operator-=(int x) {
-            p -= x;
-            return *this;
-        }
-
-        iter operator++() {
+        Iterator operator++ () {
             p++;
             return *this;
         }
 
-        iter &operator--() {
-            p--;
-            return *this;
-        }
-
-        iter operator++(int) {
-            iter tmp(*this);
+        Iterator operator++ (int) {
+            Iterator tmp(*this);
             ++p;
             return tmp;
         }
 
-        iter operator--(int) {
-            iter tmp(*this);
+        Iterator &operator-- () {
+            p--;
+            return *this;
+        }
+
+        Iterator operator-- (int) {
+            Iterator tmp(*this);
             --p;
             return tmp;
         }
 
-        auto operator-(const iter &it) {
+        Iterator operator+ (int x) {
+            return Iterator(p + x);
+        }
+
+        Iterator &operator+= (int x) {
+            p += x;
+            return *this;
+        }
+
+        auto operator- (const Iterator &it) {
             return (p - it.p);
         }
 
-        iter operator+(int x) {
-            return iter(p + x);
+        Iterator operator- (int x) {
+            return Iterator(p - x);
         }
 
-        iter operator-(int x) {
-            return iter(p - x);
+        Iterator &operator-= (int x) {
+            p -= x;
+            return *this;
         }
-
-        T &operator*() const {
+        T &operator* () const {
             return *p;
         }
 
-        T *operator->() const {
+        T *operator-> () const {
             return p;
         }
 
-        T &operator[](const int x) {
+        T &operator[] (const int x) {
             return p[x];
         }
 
-        bool operator==(const iter &x) const {
+        bool operator== (const Iterator &x) const {
             return x.p == this->p;
         }
 
-        bool operator!=(const iter &x) const {
+        bool operator!= (const Iterator &x) const {
             return x.p != this->p;
         }
 
-        bool operator<(const iter &x) const {
+        bool operator< (const Iterator &x) const {
             return x.p < this->p;
         }
 
-        bool operator>(const iter &x) const {
+        bool operator> (const Iterator &x) const {
             return x.p > this->p;
         }
 
-        bool operator>=(const iter &x) const {
+        bool operator>= (const Iterator &x) const {
             return x.p >= this->p;
         }
 
-        bool operator<=(const iter &x) const {
+        bool operator<= (const Iterator &x) const {
             return x.p <= this->p;
         }
     };
 
+    Circular_Buffer() {};
+
+    Circular_Buffer (int cap) : capacity(cap) {
+        head = 0;
+        tail = 0;
+        data = new T[capacity];
+    }
 
 
-    circular_buffer(int size_ = 0) {
-        this->m_capacity = size_;
-        this->m_first = &m_arr[0];
-        this->m_last = &m_arr[m_capacity - 1];
-        this->m_cur_first = &m_arr[0];
-        this->m_cur_last= &m_arr[m_capacity - 1];
-    }
-    circular_buffer(const circular_buffer& buf) : m_capacity{buf.m_capacity}, m_arr{buf.m_arr}, m_cur_first{buf.m_cur_first},
-                                                  m_cur_last{buf.m_cur_last}, m_first{buf.m_first}, m_last{buf.m_last} {}
-
-    ~circular_buffer() {
-        delete[] m_arr;
+    Iterator begin () const {
+        return Iterator(data + head);
     }
 
-    iter begin() {
-        return (m_arr);
-    }
-    iter end() {
-        return iter(m_arr + m_capacity);
-    }
-    int capacity_buffer() const {
-        return m_capacity;
+    Iterator end () const {
+        return Iterator(data + tail);
     }
 
-    void push_back(const T& value) {
-        *m_cur_first = value;
-        m_last == m_cur_first ? m_cur_first = m_first : m_cur_first++;
+    T &operator[] (int index) {
+        return data[index % capacity];
     }
-    void push_front(const T& value) {
-        *m_cur_last = value;
-        m_first == m_cur_last ? m_cur_last = m_last : m_cur_last--;
+
+    void push_front(const T &x) {
+        if (tail == capacity) {
+            data[head] = x;
+            return;
+        }
+        for (int i = tail; i >= head; i--) {
+            data[i + 1] = data[i];
+        }
+        data[head] = x;
+        tail++;
     }
-    void pop_back() {
-        *m_cur_first = 0;
-        m_cur_first == m_first ? m_cur_first = m_last : m_cur_first++;
-    }
+
     void pop_front() {
-        *m_cur_last = 0;
-        m_cur_last == m_last ? m_cur_last = m_first : m_cur_last++;
-    }
-    T operator [] (int i) const {
-        return m_arr[i % m_capacity];
-    }
-    void change_capacity(const int& value) {
-        T* temp = new T[value];
-        int size = std::min(m_capacity, value);
-        for (int i = 0; i < size; ++i)
-            temp[i] = m_arr[i];
-        m_capacity = value;
-        m_arr = new T[value];
-        for (int i = 0; i < value; ++i)
-            m_arr[i] = temp[i];
-        m_first = &m_arr[0];
-        m_last = &m_arr[m_capacity - 1];
-        m_cur_first = m_last;
-        m_cur_last = m_first;
-        delete[] temp;
+        data[head] = 0;
+        for (int i = head; i <= tail; ++i) {
+            data[i] = data[i + 1];
+        }
+        data[tail] = 0;
+        --tail;
     }
 
-    friend std::ostream& operator<< (std::ostream &out, circular_buffer<T> &circularBuffer){
-        for (auto i = &circularBuffer.m_arr[0]; i != &circularBuffer.m_arr[circularBuffer.m_capacity - 1]; ++i)
-            out << *i << ' ';
-        out << circularBuffer.m_arr[circularBuffer.m_capacity - 1];
+    void push_back(const T &x) {
+        if (tail == capacity) {
+            tail--;
+        }
+        data[tail] = x;
+        if (tail != capacity + 1) {
+            tail++;
+        }
+    }
+
+    void pop_back() {
+        data[tail] = 0;
+        tail--;
+    }
+
+    void resize(const int &n) {
+        T *tmp = new T[n];
+        for (int i = 0; i < n; i++) {
+            tmp[i] = data[i];
+        }
+        delete[] data;
+        data = tmp;
+        capacity = n;
+    }
+
+    friend std::ostream& operator<< (std::ostream &out, Circular_Buffer &buf) {
+        for (Iterator iter = buf.begin(); iter != buf.end(); ++iter) {
+            out << *iter << " ";
+        }
+        out << std::endl;
         return out;
     }
-};
-
-template<class T>
-class CPoint {
-public:
-    CPoint(T x = 0, T y = 0) : m_x{x}, m_y{y} {}
-
-    friend std::ostream& operator<< (std::ostream &out, CPoint &point){
-        out << "(" << point.m_x << "; " << point.m_y << ")";
-        return out;
+    ~Circular_Buffer() {
+        delete[] data;
     }
-private:
-    T m_x, m_y;
 };
 
 #endif //LABA_7_CIRCULARBUFFER_H
